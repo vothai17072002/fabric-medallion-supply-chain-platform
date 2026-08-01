@@ -1,0 +1,54 @@
+architecture: fabric-medallion-supply-chain
+snapshot_date: 2026-08-01
+layers:
+  brz:
+    platform: fabric_lakehouse
+    responsibility: source_aligned_reusable_data
+    rules:
+      - preserve_source_grain
+      - add_ingestion_metadata
+      - avoid_report_specific_logic
+  sil:
+    platform: fabric_warehouse
+    responsibility: curated_history_reference_and_domain_logic
+    verified_dev_base_and_control_tables: 38
+    domains:
+      - reference_master
+      - sales_history
+      - forecast_history
+      - open_order_history
+      - inventory_history
+      - data_quality
+  gld:
+    platform: fabric_warehouse
+    responsibility: dimensional_serving_marts
+    verified_dev_tables: 15
+    marts:
+      - shared_dimensions
+      - forecast_accuracy
+      - inventory_health
+  semantic:
+    platform: power_bi_direct_lake
+    verified_tables: 27
+    verified_relationships: 22
+    domains:
+      - forecast_accuracy
+      - inventory_health
+  consumption:
+    platform: power_bi
+    reports:
+      - forecast_accuracy
+      - inventory_health_control_tower
+orchestration:
+  wrapper_activities: 9
+  per_table_activities: 45
+release_controls:
+  - database_object_manifest
+  - data_quality_gate
+  - schema_drift_check
+  - semantic_binding_check
+  - report_binding_check
+security:
+  contains_real_data: false
+  contains_credentials: false
+  contains_internal_endpoints: false
