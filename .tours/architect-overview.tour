@@ -1,60 +1,94 @@
 {
   "$schema": "https://aka.ms/codetour-schema",
-  "title": "Fabric Medallion Platform — Architect Review",
-  "description": "A deep but focused walkthrough of BRZ, SIL, GLD, orchestration, quality gates, Direct Lake, and environment controls.",
+  "title": "Fabric Medallion Platform — Senior Architecture Review",
+  "description": "A focused walkthrough of evidence, layer contracts, decisions, reliability, security, capacity, and executable release controls.",
   "isPrimary": true,
   "steps": [
     {
-      "title": "Orient on the whole system",
-      "description": "The README presents a full lineage from source-aligned lakehouse data to decision products. The primary mechanism is a layer contract, not merely three storage names. That matters for ownership and testing; the gotcha is calling any sequence of tables a medallion architecture without defining responsibilities.",
+      "title": "How to use this review",
+      "description": "In about ten minutes, follow the platform from evidence and layer contracts through architecture decisions, recovery, security, capacity, executable controls, and a sequenced roadmap. Keep observed state separate from proposed targets throughout."
+    },
+    {
+      "title": "Start with evidence, not a technology diagram",
+      "description": "The README separates observed metadata, inferred architecture, and proposed controls. This prevents a target pattern or synthetic sample from being presented as an achieved production outcome.",
       "file": "README.md",
-      "pattern": "^# Fabric Medallion Supply Chain Platform$"
+      "pattern": "^## Evidence taxonomy$"
     },
     {
-      "title": "Read the BRZ contract",
-      "description": "BRZ preserves source grain and ingestion metadata while excluding report-specific logic. This makes replay and reuse possible. The gotcha is treating BRZ as ungoverned dumping ground—security, lineage, and freshness still apply.",
+      "title": "Understand the current data plane",
+      "description": "The observed flow is BRZ to SIL to GLD to a shared Direct Lake semantic model and two focused reports. Aggregate counts establish scope without exposing tenant IDs, endpoints, or proprietary definitions.",
+      "file": "README.md",
+      "pattern": "^## Current-state architecture$"
+    },
+    {
+      "title": "Turn medallion names into contracts",
+      "description": "Each layer declares ownership, grain, keys, load behavior, evolution, quality, recovery, and consumers. A layer exists because it owns a boundary—not because three medal names look complete on a diagram.",
       "file": "docs/e2e-architecture.md",
-      "pattern": "^## BRZ — source-aligned lakehouse$"
+      "pattern": "^## Layer contract summary$"
     },
     {
-      "title": "Understand SIL responsibilities",
-      "description": "SIL owns reusable references, snapshots, history, keys, and domain transformations. Working views separate transformation logic from materialized curated tables. The gotcha is pushing presentation-specific calculations into Silver and creating hidden report coupling.",
-      "file": "docs/e2e-architecture.md",
-      "pattern": "^## SIL — processing warehouse$"
+      "title": "Inspect the architecture decisions",
+      "description": "ADRs preserve context, alternatives, consequences, and revisit triggers. This is the interview-ready layer: the design can be defended and changed when its assumptions stop holding.",
+      "file": "docs/adr/001-medallion-layer-boundaries.md",
+      "pattern": "^## Decision$"
     },
     {
-      "title": "Inspect the Gold serving contract",
-      "description": "GLD publishes stable conformed dimensions and facts for Direct Lake. Separating Forecast Accuracy and Inventory Health marts keeps grains explicit while shared dimensions enable cross-domain consistency. The gotcha is allowing model-specific helper logic to destabilize the dimensional serving contract.",
-      "file": "docs/e2e-architecture.md",
-      "pattern": "^## GLD — serving warehouse$"
-    },
-    {
-      "title": "Compare orchestration modes",
-      "description": "The wrapper pipeline is operationally simple; the per-table graph improves isolation, parallelism, and recovery. Both express the same dependency model at different granularity. The gotcha is optimizing activity count without preserving idempotence and clear restart boundaries.",
+      "title": "Separate run success from trusted publication",
+      "description": "A completed pipeline is not automatically trusted data. The orchestration state machine keeps candidate validation and publication state separate, enabling a fail-closed gate and last-known-good recovery.",
       "file": "docs/orchestration.md",
-      "pattern": "^## Domain wrapper pipeline$"
+      "pattern": "^## Run and publication state machines$"
     },
     {
-      "title": "Place quality before publication",
-      "description": "Completeness, uniqueness, reconciliation, freshness, and drift gates block Gold publication when trust contracts fail. This protects every downstream consumer once. The gotcha is implementing quality only as report-side warning cards after bad data is already published.",
+      "title": "Classify failure before retrying",
+      "description": "Transient, capacity, authentication, schema, DQ, and logic failures require different actions. Blindly retrying deterministic failures consumes capacity and extends time to diagnosis.",
+      "file": "docs/orchestration.md",
+      "pattern": "^## Failure classification and retry policy$"
+    },
+    {
+      "title": "Make quality fail closed",
+      "description": "Expected contract coverage is checked before rule outcomes. Zero results, missing results, duplicate results, null status, and unknown status all reject a candidate instead of becoming accidental passes.",
       "file": "docs/data-quality.md",
-      "pattern": "^## Quality gates$"
+      "pattern": "^## Minimum blocking controls$"
     },
     {
-      "title": "Study the architecture findings",
-      "description": "The sanitized assessment highlights environment binding, object drift, orchestration, and measure-governance risks. Showing findings and controls demonstrates architecture review skill, not just solution drawing. The gotcha is publishing internal identifiers or blaming people instead of documenting reproducible controls.",
+      "title": "Connect SLOs to ownership and decisions",
+      "description": "Reliability targets are explicitly proposed, not claimed. Each has a measurement window, response, recovery dependency, accountable role, and review cadence.",
+      "file": "docs/reliability-operating-model.md",
+      "pattern": "^## Reliability objectives$"
+    },
+    {
+      "title": "Review security as several boundaries",
+      "description": "Workspace, item, data-plane, semantic, and audience permissions are distinct. The target model separates workload identities from users and requires positive and negative access tests.",
+      "file": "docs/security-governance.md",
+      "pattern": "^## Identity and access matrix$"
+    },
+    {
+      "title": "Size with evidence",
+      "description": "Capacity guidance begins with workload classes and a measurement loop. Scale, scheduling, model split, materialization, and pre-aggregation are decisions with explicit cost and reliability trade-offs.",
+      "file": "docs/capacity-cost.md",
+      "pattern": "^## Capacity design loop$"
+    },
+    {
+      "title": "Validate the canonical contract",
+      "description": "The JSON contract separates observed inventory from target requirements. Its schema and semantic validator enforce layer order, DAG consistency, required release gates, proposed-target labels, and public-portfolio safety.",
+      "file": "architecture/layer-contracts.json",
+      "pattern": "\"targetContracts\":"
+    },
+    {
+      "title": "Inspect the fail-closed SQL pattern",
+      "description": "The synthetic procedure proves expected contract coverage and legal publication state before approval. It persists rejection evidence and handles an approved replay as an explicit idempotent no-op.",
+      "file": "samples/sql/data-quality-gate.sql",
+      "pattern": "CREATE OR ALTER PROCEDURE dbo.usp_gate_gold_publish"
+    },
+    {
+      "title": "Close on the remediation roadmap",
+      "description": "The 30/60/90 plan sequences environment safety, measurable recovery and quality, then capacity and governance. Exit measures make the audit actionable without implying those outcomes are already achieved.",
       "file": "docs/current-state-assessment.md",
-      "pattern": "^## Sanitized control findings$"
+      "pattern": "^## 30/60/90-day remediation roadmap$"
     },
     {
-      "title": "Review a portable layer contract",
-      "description": "The YAML turns architectural intent into a machine-readable release input. CI can compare objects and bindings against it. The gotcha is treating a static manifest as truth without generating or validating it against deployed metadata.",
-      "file": "architecture/layer-contracts.yaml",
-      "pattern": "^architecture: fabric-medallion-supply-chain$"
-    },
-    {
-      "title": "Close with the target-state story",
-      "description": "You can now explain the end-to-end path, layer ownership, dependency waves, publish gates, and Dev/Prod controls. Continue with the semantic-model repository for relationship and metric governance, then the two report repositories for consumption design. Keep examples synthetic and never expose endpoints or proprietary definitions."
+      "title": "Translate the review into leadership action",
+      "description": "You have moved from dated evidence to target contracts, failure containment, decision rights, cost/security trade-offs, and an executable release gate. A Senior/Lead discussion should now connect the highest-risk control gap to an owner, an exit measure, and a reversible first delivery increment."
     }
   ]
 }

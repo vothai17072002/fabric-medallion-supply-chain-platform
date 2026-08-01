@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/schemas/fabric-medallion-layer-contracts.schema.json",
+  "title": "Fabric Medallion Layer Contracts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "contractVersion",
+    "architecture",
+    "evidence",
+    "observedSnapshot",
+    "targetContracts",
+    "releaseControls",
+    "validationPolicy",
+    "portfolioSafety"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "layer-contracts.schema.json" },
+    "contractVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "architecture": { "type": "string", "const": "fabric-medallion-supply-chain" },
+    "evidence": { "$ref": "#/$defs/evidence" },
+    "observedSnapshot": { "$ref": "#/$defs/observedSnapshot" },
+    "targetContracts": {
+      "type": "array",
+      "minItems": 5,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/layerContract" }
+    },
+    "releaseControls": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/releaseControl" }
+    },
+    "validationPolicy": { "$ref": "#/$defs/validationPolicy" },
+    "portfolioSafety": { "$ref": "#/$defs/portfolioSafety" }
+  },
+  "$defs": {
+    "layerName": {
+      "type": "string",
+      "enum": ["brz", "sil", "gld", "semantic", "consumption"]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["snapshotDate", "classification", "limitations"],
+      "properties": {
+        "snapshotDate": { "type": "string", "format": "date" },
+        "classification": { "type": "string", "const": "sanitized_read_only_metadata" },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 10 }
+        }
+      }
+    },
+    "observedLayer": {
+      "type": "object",
+      "required": ["platform", "responsibility"],
+      "properties": {
+        "platform": { "type": "string", "minLength": 3 },
+        "responsibility": { "type": "string", "minLength": 3 },
+        "verifiedDevObjectCount": { "type": "integer", "minimum": 0 },
+        "verifiedTableCount": { "type": "integer", "minimum": 0 },
+        "verifiedRelationshipCount": { "type": "integer", "minimum": 0 },
+        "verifiedMeasureCount": { "type": "integer", "minimum": 0 },
+        "verifiedPrimaryReportCount": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "observedSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["layers", "orchestration"],
+      "properties": {
+        "layers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["brz", "sil", "gld", "semantic", "consumption"],
+          "properties": {
+            "brz": { "$ref": "#/$defs/observedLayer" },
+            "sil": { "$ref": "#/$defs/observedLayer" },
+            "gld": { "$ref": "#/$defs/observedLayer" },
+            "semantic": { "$ref": "#/$defs/observedLayer" },
+            "consumption": { "$ref": "#/$defs/observedLayer" }
+          }
+        },
+        "orchestration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["wrapperActivityCount", "perTableActivityCount"],
+          "properties": {
+            "wrapperActivityCount": { "type": "integer", "minimum": 1 },
+            "perTableActivityCount": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "layerContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "layer",
+        "platform",
+        "ownerRole",
+        "purpose",
+        "inputLayers",
+        "consumers",
+        "outputContract",
+        "loadPatterns",
+        "freshness",
+        "schemaEvolution",
+        "qualityGates",
+        "classificationMaximum",
+        "recovery"
+      ],
+      "properties": {
+        "layer": { "$ref": "#/$defs/layerName" },
+        "platform": { "type": "string", "minLength": 3 },
+        "ownerRole": { "type": "string", "minLength": 3 },
+        "purpose": { "type": "string", "minLength": 10 },
+        "inputLayers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/layerName" }
+        },
+        "consumers": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/layerName" }
+        },
+        "outputContract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["grainPolicy", "keyPolicy"],
+          "properties": {
+            "grainPolicy": { "type": "string", "minLength": 5 },
+            "keyPolicy": { "type": "string", "minLength": 5 }
+          }
+        },
+        "loadPatterns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 3 }
+        },
+        "freshness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maximumLagMinutes", "basis"],
+          "properties": {
+            "maximumLagMinutes": { "type": "integer", "minimum": 1 },
+            "basis": { "type": "string", "pattern": "^proposed_" }
+          }
+        },
+        "schemaEvolution": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["compatibility", "breakingChangePolicy"],
+          "properties": {
+            "compatibility": { "type": "string", "enum": ["backward", "forward", "full", "none"] },
+            "breakingChangePolicy": { "type": "string", "minLength": 10 }
+          }
+        },
+        "qualityGates": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 3 }
+        },
+        "classificationMaximum": {
+          "type": "string",
+          "enum": ["public", "internal", "confidential", "restricted"]
+        },
+        "recovery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rpoHours", "rtoHours"],
+          "properties": {
+            "rpoHours": { "type": "number", "exclusiveMinimum": 0 },
+            "rtoHours": { "type": "number", "exclusiveMinimum": 0 }
+          }
+        }
+      }
+    },
+    "releaseControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "scope", "blocking", "evidenceRequired"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]+$" },
+        "scope": { "type": "string", "minLength": 3 },
+        "blocking": { "type": "boolean" },
+        "evidenceRequired": { "type": "string", "minLength": 5 }
+      }
+    },
+    "validationPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredLayerOrder", "requireUniqueLayers", "requireAcyclicDependencies", "requiredBlockingReleaseControls"],
+      "properties": {
+        "requiredLayerOrder": {
+          "type": "array",
+          "prefixItems": [
+            { "const": "brz" },
+            { "const": "sil" },
+            { "const": "gld" },
+            { "const": "semantic" },
+            { "const": "consumption" }
+          ],
+          "items": false,
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "requireUniqueLayers": { "type": "boolean", "const": true },
+        "requireAcyclicDependencies": { "type": "boolean", "const": true },
+        "requiredBlockingReleaseControls": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "portfolioSafety": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["containsRealData", "containsCredentials", "containsInternalEndpoints", "containsTenantOrWorkspaceIdentifiers", "containsOrganizationBranding"],
+      "properties": {
+        "containsRealData": { "const": false },
+        "containsCredentials": { "const": false },
+        "containsInternalEndpoints": { "const": false },
+        "containsTenantOrWorkspaceIdentifiers": { "const": false },
+        "containsOrganizationBranding": { "const": false }
+      }
+    }
+  }
+}

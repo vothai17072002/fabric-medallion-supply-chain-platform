@@ -1,0 +1,243 @@
+{
+  "$schema": "layer-contracts.schema.json",
+  "contractVersion": "1.0.0",
+  "architecture": "fabric-medallion-supply-chain",
+  "evidence": {
+    "snapshotDate": "2026-08-01",
+    "classification": "sanitized_read_only_metadata",
+    "limitations": [
+      "No data values or proprietary transformations were inspected for this public artifact",
+      "Capacity, latency, incident, security-policy, and cost evidence were not available",
+      "Proposed targets are design starting points rather than achieved service levels"
+    ]
+  },
+  "observedSnapshot": {
+    "layers": {
+      "brz": {
+        "platform": "fabric_lakehouse",
+        "responsibility": "source_aligned_reusable_data"
+      },
+      "sil": {
+        "platform": "fabric_warehouse",
+        "responsibility": "curated_history_reference_and_domain_logic",
+        "verifiedDevObjectCount": 38
+      },
+      "gld": {
+        "platform": "fabric_warehouse",
+        "responsibility": "dimensional_serving_marts",
+        "verifiedDevObjectCount": 15
+      },
+      "semantic": {
+        "platform": "power_bi_direct_lake",
+        "responsibility": "governed_relationships_and_metrics",
+        "verifiedTableCount": 27,
+        "verifiedRelationshipCount": 22,
+        "verifiedMeasureCount": 545
+      },
+      "consumption": {
+        "platform": "power_bi",
+        "responsibility": "domain_decision_experiences",
+        "verifiedPrimaryReportCount": 2
+      }
+    },
+    "orchestration": {
+      "wrapperActivityCount": 9,
+      "perTableActivityCount": 45
+    }
+  },
+  "targetContracts": [
+    {
+      "layer": "brz",
+      "platform": "fabric_lakehouse",
+      "ownerRole": "data_platform",
+      "purpose": "Preserve source grain, ingestion evidence, and replay boundaries",
+      "inputLayers": [],
+      "consumers": ["sil"],
+      "outputContract": {
+        "grainPolicy": "source_grain_with_batch_and_event_time",
+        "keyPolicy": "preserve_source_identifiers_and_ingestion_identity"
+      },
+      "loadPatterns": ["append", "bounded_replace"],
+      "freshness": {
+        "maximumLagMinutes": 1440,
+        "basis": "proposed_maximum_after_source_readiness"
+      },
+      "schemaEvolution": {
+        "compatibility": "backward",
+        "breakingChangePolicy": "version_and_quarantine_before_downstream_use"
+      },
+      "qualityGates": ["schema", "batch_identity", "completeness", "validity"],
+      "classificationMaximum": "restricted",
+      "recovery": {
+        "rpoHours": 24,
+        "rtoHours": 4
+      }
+    },
+    {
+      "layer": "sil",
+      "platform": "fabric_warehouse",
+      "ownerRole": "domain_data_engineering",
+      "purpose": "Conform keys, history, snapshots, and reusable domain logic",
+      "inputLayers": ["brz"],
+      "consumers": ["gld"],
+      "outputContract": {
+        "grainPolicy": "declared_per_domain_table_and_snapshot_window",
+        "keyPolicy": "governed_business_key_with_explicit_history_policy"
+      },
+      "loadPatterns": ["full_candidate", "incremental_append", "bounded_replace", "dimension_merge"],
+      "freshness": {
+        "maximumLagMinutes": 90,
+        "basis": "proposed_processing_lag_after_accepted_brz_batch"
+      },
+      "schemaEvolution": {
+        "compatibility": "backward",
+        "breakingChangePolicy": "version_migrate_and_reconcile_consumers"
+      },
+      "qualityGates": ["contract_coverage", "completeness", "uniqueness", "referential_integrity", "validity"],
+      "classificationMaximum": "restricted",
+      "recovery": {
+        "rpoHours": 24,
+        "rtoHours": 4
+      }
+    },
+    {
+      "layer": "gld",
+      "platform": "fabric_warehouse",
+      "ownerRole": "analytics_engineering",
+      "purpose": "Publish versioned conformed dimensions and report-ready facts",
+      "inputLayers": ["sil"],
+      "consumers": ["semantic"],
+      "outputContract": {
+        "grainPolicy": "stable_dimensional_grain_declared_per_fact",
+        "keyPolicy": "conformed_surrogate_and_business_keys_with_unknown_member_policy"
+      },
+      "loadPatterns": ["full_candidate", "bounded_replace", "dimension_merge", "versioned_publish"],
+      "freshness": {
+        "maximumLagMinutes": 120,
+        "basis": "proposed_publication_lag_after_planned_source_readiness"
+      },
+      "schemaEvolution": {
+        "compatibility": "backward",
+        "breakingChangePolicy": "parallel_version_and_downstream_acceptance"
+      },
+      "qualityGates": ["contract_coverage", "uniqueness", "referential_integrity", "reconciliation", "freshness", "drift"],
+      "classificationMaximum": "confidential",
+      "recovery": {
+        "rpoHours": 24,
+        "rtoHours": 4
+      }
+    },
+    {
+      "layer": "semantic",
+      "platform": "power_bi_direct_lake",
+      "ownerRole": "semantic_model_owner",
+      "purpose": "Govern relationships, metrics, formatting, security, and compatibility",
+      "inputLayers": ["gld"],
+      "consumers": ["consumption"],
+      "outputContract": {
+        "grainPolicy": "preserve_declared_gold_grain_and_aggregation_semantics",
+        "keyPolicy": "validated_relationship_keys_and_filter_direction"
+      },
+      "loadPatterns": ["artifact_deploy", "framing_or_automatic_update"],
+      "freshness": {
+        "maximumLagMinutes": 30,
+        "basis": "proposed_model_visibility_lag_after_gold_publication"
+      },
+      "schemaEvolution": {
+        "compatibility": "backward",
+        "breakingChangePolicy": "golden_query_and_consumer_migration"
+      },
+      "qualityGates": ["model_binding", "relationship", "golden_query", "security", "performance"],
+      "classificationMaximum": "confidential",
+      "recovery": {
+        "rpoHours": 24,
+        "rtoHours": 4
+      }
+    },
+    {
+      "layer": "consumption",
+      "platform": "power_bi",
+      "ownerRole": "bi_product_owner",
+      "purpose": "Deliver tested domain decision experiences to approved audiences",
+      "inputLayers": ["semantic"],
+      "consumers": [],
+      "outputContract": {
+        "grainPolicy": "visual_interactions_preserve_governed_metric_context",
+        "keyPolicy": "no_report_local_redefinition_of_governed_keys"
+      },
+      "loadPatterns": ["artifact_deploy", "target_binding"],
+      "freshness": {
+        "maximumLagMinutes": 15,
+        "basis": "proposed_report_availability_lag_after_model_release"
+      },
+      "schemaEvolution": {
+        "compatibility": "backward",
+        "breakingChangePolicy": "audience_acceptance_and_release_note"
+      },
+      "qualityGates": ["report_binding", "smoke", "access", "representative_query"],
+      "classificationMaximum": "confidential",
+      "recovery": {
+        "rpoHours": 24,
+        "rtoHours": 4
+      }
+    }
+  ],
+  "releaseControls": [
+    {
+      "id": "database_object_manifest",
+      "scope": "sil_gld_control_objects",
+      "blocking": true,
+      "evidenceRequired": "definition_and_dependency_diff"
+    },
+    {
+      "id": "data_quality_gate",
+      "scope": "candidate_publication",
+      "blocking": true,
+      "evidenceRequired": "complete_terminal_results_for_active_contracts"
+    },
+    {
+      "id": "schema_drift_check",
+      "scope": "all_contract_outputs",
+      "blocking": true,
+      "evidenceRequired": "approved_contract_diff"
+    },
+    {
+      "id": "semantic_binding_check",
+      "scope": "semantic_to_gold",
+      "blocking": true,
+      "evidenceRequired": "target_environment_binding_assertion"
+    },
+    {
+      "id": "report_binding_check",
+      "scope": "report_to_semantic",
+      "blocking": true,
+      "evidenceRequired": "target_model_binding_assertion"
+    },
+    {
+      "id": "security_access_check",
+      "scope": "data_model_and_audience_paths",
+      "blocking": true,
+      "evidenceRequired": "positive_and_negative_access_tests"
+    }
+  ],
+  "validationPolicy": {
+    "requiredLayerOrder": ["brz", "sil", "gld", "semantic", "consumption"],
+    "requireUniqueLayers": true,
+    "requireAcyclicDependencies": true,
+    "requiredBlockingReleaseControls": [
+      "database_object_manifest",
+      "data_quality_gate",
+      "schema_drift_check",
+      "semantic_binding_check",
+      "report_binding_check",
+      "security_access_check"
+    ]
+  },
+  "portfolioSafety": {
+    "containsRealData": false,
+    "containsCredentials": false,
+    "containsInternalEndpoints": false,
+    "containsTenantOrWorkspaceIdentifiers": false,
+    "containsOrganizationBranding": false
+  }
+}
