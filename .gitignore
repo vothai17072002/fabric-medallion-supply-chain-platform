@@ -4,3 +4,5 @@
 *.bim
 exports/
 secrets/
+__pycache__/
+.venv/
